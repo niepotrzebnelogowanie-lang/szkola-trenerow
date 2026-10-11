@@ -82,8 +82,8 @@ jobs:
               if not re.search(rf"{view}:render[A-Za-z]+", app):
                   raise SystemExit("Navigation view without renderer: " + view)
 
-          actions = set(re.findall(r'data-action\\s*=\\s*(?:\\\\\"|\")([a-z][a-z0-9-]*)', app))
-          handlers = set(re.findall(r"case\\s+.([a-z][a-z0-9-]*).:", app))
+          actions = set(re.findall(r'data-action\s*=\s*(?:\\"|")([a-z][a-z0-9-]*)', app))
+          handlers = set(re.findall(r"case\s+.([a-z][a-z0-9-]*).:", app))
           missing_actions = sorted(actions - handlers)
           if missing_actions:
               raise SystemExit("UI actions without handlers: " + ", ".join(missing_actions))
