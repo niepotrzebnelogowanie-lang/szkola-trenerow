@@ -97,8 +97,7 @@ async function syncFromCloud(user) {
     const app = window.SzkolaApp;
     const { data, error } = await supabase.from('user_workspaces').select('data, updated_at').eq('user_id', user.id).maybeSingle();
     if (error) throw error;
-    const localRaw = localStorage.getItem(app.storeKey);
-    const local = localRaw ? JSON.parse(localRaw) : null;
+    // app.store is already normalized with defaults; avoid reparsing potentially corrupt localStorage.
     const localHasWork = hasLocalWork(app.store);
     if (data?.data && typeof data.data === 'object') {
       // Preserve every kind of unsynced work before switching identity on a shared browser.
