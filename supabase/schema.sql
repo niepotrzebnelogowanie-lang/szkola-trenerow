@@ -14,20 +14,20 @@ grant select, insert, update, delete on table public.user_workspaces to authenti
 drop policy if exists "Users can read own workspace" on public.user_workspaces;
 create policy "Users can read own workspace"
   on public.user_workspaces for select to authenticated
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 drop policy if exists "Users can insert own workspace" on public.user_workspaces;
 create policy "Users can insert own workspace"
   on public.user_workspaces for insert to authenticated
-  with check (auth.uid() = user_id);
+  with check ((select auth.uid()) = user_id);
 
 drop policy if exists "Users can update own workspace" on public.user_workspaces;
 create policy "Users can update own workspace"
   on public.user_workspaces for update to authenticated
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 drop policy if exists "Users can delete own workspace" on public.user_workspaces;
 create policy "Users can delete own workspace"
   on public.user_workspaces for delete to authenticated
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
