@@ -4,7 +4,7 @@ on:
     branches: [main]
   workflow_dispatch:
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 concurrency:
@@ -19,71 +19,31 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Prepare the complete app as a self-contained page
+      - name: Extract the complete app
         run: |
           set -euo pipefail
           test -f Szkola-trenerow-pakiet.zip
           mkdir -p extracted _site
           unzip -q Szkola-trenerow-pakiet.zip -d extracted
           test -f extracted/szkola-trenerow/index.html
+          test -f extracted/szkola-trenerow/styles.css
+          test -f extracted/szkola-trenerow/app.js
+          test -f extracted/szkola-trenerow/auth.js
           cp -a extracted/szkola-trenerow/. _site/
           cp supabase-config.js _site/supabase-config.js
+          # Fail before deployment if the HTML points to missing local assets.
           python3 - <<'PY'
           from pathlib import Path
           import re
           root = Path("_site")
-          html_path = root / "index.html"
-          html = html_path.read_text(encoding="utf-8")
-          css = (root / "styles.css").read_text(encoding="utf-8")
-          app = (root / "app.js").read_text(encoding="utf-8")
-          auth = (root / "auth.js").read_text(encoding="utf-8")
-          config = (root / "supabase-config.js").read_text(encoding="utf-8")
-
-          # Embed assets robustly, regardless of ./ prefixes or tag attributes.
-          html, css_count = re.subn(
-              r"<link\b(?=[^>]*\bhref=[\"'][^\"']*styles\.css(?:\?[^\"']*)?[\"'])[^>]*>",
-              lambda m: "<style>\n" + css + "\n</style>", html, count=1, flags=re.I
-          )
-          html, config_count = re.subn(
-              r"<script\b(?=[^>]*\bsrc=[\"'](?:\./)?supabase-config\.js(?:\?[^\"']*)?[\"'])[^>]*>\s*</script>",
-              lambda m: "<script>\n" + config + "\n</script>", html, count=1, flags=re.I
-          )
-          html, app_count = re.subn(
-              r"<script\b(?=[^>]*\bsrc=[\"'](?:\./)?app\.js(?:\?[^\"']*)?[\"'])[^>]*>\s*</script>",
-              lambda m: "<script>\n" + app + "\n</script>", html, count=1, flags=re.I
-          )
-          html, auth_count = re.subn(
-              r"<script\b(?=[^>]*\bsrc=[\"'](?:\./)?auth\.js(?:\?[^\"']*)?[\"'])[^>]*>\s*</script>",
-              lambda m: "<script type=\"module\">\n" + auth + "\n</script>", html, count=1, flags=re.I
-          )
-          if (css_count, config_count, app_count, auth_count) != (1, 1, 1, 1):
-              raise SystemExit(f"Nie udało się osadzić zasobów: CSS={css_count}, config={config_count}, app={app_count}, auth={auth_count}")
-          if '.app-shell' not in html or 'SZKOŁA TRENERÓW — offline-first educational prototype' not in html:
-              raise SystemExit("Wynik nie zawiera stylów lub skryptu aplikacji")
-          if re.search(r"<link\b[^>]*href=[\"'][^\"']*styles\.css", html, flags=re.I):
-              raise SystemExit("Pozostał zewnętrzny arkusz CSS")
-          if re.search(r"<script\b[^>]*src=[\"'](?:\./)?(?:app|auth|supabase-config)\.js", html, flags=re.I):
-              raise SystemExit("Pozostał zewnętrzny skrypt aplikacji")
-          html_path.write_text(html, encoding="utf-8")
+          html = (root / "index.html").read_text(encoding="utf-8")
+          for name in ("styles.css", "app.js", "auth.js", "supabase-config.js"):
+              if not (root / name).is_file():
+                  raise SystemExit(f"Missing deployed asset: {name}")
+          if 'href="styles.css"' not in html or 'src="app.js"' not in html or 'src="auth.js"' not in html:
+              raise SystemExit("The app HTML does not contain the expected asset references")
+          print("Verified: index.html, styles.css, app.js, auth.js and Supabase config are together in _site.")
           PY
-      - name: Sync app files to repository root for branch-based Pages
-        run: |
-          set -euo pipefail
-          cp extracted/szkola-trenerow/index.html ./index.html
-          cp extracted/szkola-trenerow/styles.css ./styles.css
-          cp extracted/szkola-trenerow/app.js ./app.js
-          cp extracted/szkola-trenerow/auth.js ./auth.js
-          cp extracted/szkola-trenerow/favicon.svg ./favicon.svg
-          cp supabase-config.js ./supabase-config.js
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html styles.css app.js auth.js favicon.svg supabase-config.js
-          if ! git diff --cached --quiet; then
-            git commit -m "Publish complete app files at repository root"
-            git push
-          else
-            echo "Root app files are already up to date."
-          fi
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload site artifact
