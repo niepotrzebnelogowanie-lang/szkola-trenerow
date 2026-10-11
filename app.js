@@ -344,9 +344,13 @@ function analyzeQuizReflection(l,text){
  const has=pattern=>pattern.test(normalized);
  const causal=has(/\b(poniewaz|dlatego|bo|dzieki|gdy|jesli|jezeli|pozwala|umozliwia|wtedy|wynika|skutkiem|aby|zeby|przez to|co sprawia)\b/);
  const conditional=has(/\b(jezeli|jesli|gdy|kiedy|w przypadku|natomiast|z kolei|jesli rywal|gdy rywal|alternatyw|wariant|jesli nie|jesli przeciwnik)\b/);
- const trainingContext=has(/\b(trening\w*|cwiczen\w*|boisk\w*|mecz\w*|gra zadaniow\w*|jednostk\w*)\b/);\n const footballConcept=has(/\b(podani\w*|press\w*|asekur\w*|przestrzen\w*|lini\w*|bramk\w*|atak\w*|obron\w*|przewag\w*|woln\w*|przyjec\w*|budowani\w*|odbi\w*|strat\w*|kontr\w*|szerokos\w*|glebi\w*|centrum\w*)\b/);\n const transfer=trainingContext&&footballConcept;
+ const trainingContext=has(/\b(trening\w*|cwiczen\w*|boisk\w*|mecz\w*|gra zadaniow\w*|jednostk\w*)\b/);
+ const footballConcept=has(/\b(podani\w*|press\w*|asekur\w*|przestrzen\w*|lini\w*|bramk\w*|atak\w*|obron\w*|przewag\w*|woln\w*|przyjec\w*|budowani\w*|odbi\w*|strat\w*|kontr\w*|szerokos\w*|glebi\w*|centrum\w*)\b/);
+ const transfer=trainingContext&&footballConcept;
  const evidence=has(/\b(obserw\w*|widac|zobacz\w*|sprawdz\w*|mierz\w*|kryter\w*|po czym|sygnal\w*|liczb\w*|przewag\w*|wolny zawodnik|skuteczn\w*|cel\w*|efekt\w*|ocen\w*|powtarzal\w*|progresj\w*|wejsc\w*|odzysk\w*|strat\w*|podani\w*|przyjec\w*)\b/);
- const opponentContext=has(/\b(rywal\w*|przeciwnik\w*|pressing\w*|obrona\w*|napastnik\w*|pomocnik\w*)\b/);\n const responseAction=has(/\b(alternatyw\w*|wariant\w*|zamiast|reakcj\w*|dostos\w*|zmieni\w*|plan b|asekur\w*|zabezpiecz\w*|wycof\w*|odwrotn\w*|przenos\w*|zamkn\w*|odbudow\w*|utrzym\w*)\b/);\n const adaptation=opponentContext&&responseAction;
+ const opponentContext=has(/\b(rywal\w*|przeciwnik\w*|pressing\w*|obrona\w*|napastnik\w*|pomocnik\w*)\b/);
+ const responseAction=has(/\b(alternatyw\w*|wariant\w*|zamiast|reakcj\w*|dostos\w*|zmieni\w*|plan b|asekur\w*|zabezpiecz\w*|wycof\w*|odwrotn\w*|przenos\w*|zamkn\w*|odbudow\w*|utrzym\w*)\b/);
+ const adaptation=opponentContext&&responseAction;
  const sources=[...(l.outcomes||[]),...(l.principles||[]).flat(),...(l.sections||[]).flatMap(s=>[s.title,...(s.bullets||[])])];
  const sourceTerms=[...new Set(sources.join(' ').toLocaleLowerCase('pl-PL').normalize('NFD').replace(/[\u0300-\u036f]/g,'').match(/[a-z]{6,}/g)||[])].filter(w=>!['poniewaz','dlatego','zawodnik','zawodnicy','powinien','powinna','mozemy','trener','trening','zespol','zespolu','ktory','ktora','ktore','podczas','jesli','przeciwnik','przeciwnika','mozliwosc','zachowanie','zachowania','sytuacji','sytuacja'].includes(w));
  const matched=sourceTerms.filter(term=>tokens.some(token=>token.startsWith(term.slice(0,Math.min(6,term.length)))||term.startsWith(token.slice(0,Math.min(6,token.length))))).slice(0,6);
