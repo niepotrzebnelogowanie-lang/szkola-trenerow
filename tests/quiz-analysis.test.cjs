@@ -9,6 +9,8 @@ const start = app.indexOf('function analyzeQuizReflection(l,text){');
 const end = app.indexOf('\nfunction renderQuizReflection', start);
 assert(start >= 0 && end > start, 'Could not locate analyzeQuizReflection in app.js');
 const source = app.slice(start, end);
+assert(source.includes('version:2'), 'Analyzer version must be explicit');
+assert(app.includes('analysis.version===2'), 'UI must identify outdated saved analyses');
 const analyze = vm.runInNewContext('(' + source + ')');
 
 const strongAnswers = {
@@ -32,6 +34,7 @@ for (const [id, answer] of Object.entries(strongAnswers)) {
   const result = analyze({ id, outcomes: [], principles: [], sections: [] }, answer);
   assert(result.score >= 7, id + ': developed answer should score at least 7/10, got ' + result.score);
   assert.equal(result.score, result.criteria.reduce((sum, criterion) => sum + criterion.score, 0), id + ': total must equal sum of rubric criteria');
+  assert.equal(result.version, 2, id + ': analysis version must be recorded');
   assert.equal(result.criteria.length, 5, id + ': expected five rubric dimensions');
   assert(result.strengths.length > 0, id + ': strengths feedback must not be empty');
   assert(result.improve.length <= 4, id + ': improvement list should stay actionable');
