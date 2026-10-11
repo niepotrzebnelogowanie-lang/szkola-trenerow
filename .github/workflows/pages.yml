@@ -100,11 +100,11 @@ jobs:
 
           # Bundle assets directly into index.html so Pages cannot accidentally serve
           # a shell without the app's CSS or JavaScript.
-          html = html.replace('<link rel="stylesheet" href="styles.css">', '<style>\\n' + css + '\\n</style>', 1)
-          html = html.replace('<script src="supabase-config.js"></script>', '<script>\\n' + config + '\\n</script>', 1)
-          html = html.replace('<script src="app.js"></script>', '<script>\\n' + app + '\\n</script>', 1)
-          html = html.replace('<script type="module" src="auth.js"></script>', '<script type="module">\\n' + auth + '\\n</script>', 1)
-          for marker in ('<style>', 'SZKOŁA TRENERÓW — offline-first educational prototype', 'from \\'https://esm.sh/@supabase/supabase-js@2\\'', 'data-auth-google'):
+          html = html.replace('<link rel="stylesheet" href="styles.css">', '<style>\n' + css + '\n</style>', 1)
+          html = html.replace('<script src="supabase-config.js"></script>', '<script>\n' + config + '\n</script>', 1)
+          html = html.replace('<script src="app.js"></script>', '<script>\n' + app + '\n</script>', 1)
+          html = html.replace('<script type="module" src="auth.js"></script>', '<script type="module">\n' + auth + '\n</script>', 1)
+          for marker in ('<style>', 'SZKOŁA TRENERÓW — offline-first educational prototype', "from 'https://esm.sh/@supabase/supabase-js@2'", 'data-auth-google'):
               if marker not in html:
                   raise SystemExit('Brak oczekiwanego elementu aplikacji: ' + marker)
           html_path.write_text(html, encoding="utf-8")
