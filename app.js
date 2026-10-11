@@ -382,10 +382,8 @@ function analyzeQuizReflection(l,text){
   {name:'Przeniesienie na trening',score:transferScore,max:2,detail:transferScore===2?'Opisujesz kontekst treningowy i konkretny format, regułę lub ograniczenie zadania.':transferScore===1?'Łączysz temat z treningiem, ale dopisz organizację zadania: przestrzeń, liczbę graczy, regułę lub warunek zdobycia punktu.':'Przełóż zasadę na zadanie treningowe. Określ sytuację gry i zachowanie, które zawodnicy mają ćwiczyć.'},
   {name:'Adaptacja i wariant',score:adaptationScore,max:2,detail:adaptationScore===2?'Opisujesz reakcję przeciwnika oraz konkretną odpowiedź swojego zespołu.':adaptationScore===1?'Pojawia się warunek lub alternatywa, ale połącz je z konkretnym zachowaniem rywala i decyzją zespołu.':'Dodaj wariant: co zrobi rywal, jak to rozpoznasz i jakie rozwiązanie wybierzesz zamiast pierwszego planu.'}
  ];
- let score=criteria.reduce((sum,c)=>sum+c.score,0);
+ const score=criteria.reduce((sum,c)=>sum+c.score,0);
  const specificSignals=[tacticalConcept,observable,trainingDetail,opponentResponse].filter(Boolean).length;
- if(genericCount>=2&&matchedGroups.length===0&&specificSignals<2) score=Math.min(score,3);
- else if(wordCount>=20&&matchedGroups.length===0&&specificSignals===0) score=Math.min(score,4);
  const shortAnswer=wordCount<18||sentences<2;
  const confidence=wordCount<18||sentences<2?'niska':(matchedGroups.length===0||specificSignals<2?'umiarkowana':'wyższa');
  const confidenceLabel=confidence==='niska'?'Mało danych':confidence==='umiarkowana'?'Wynik orientacyjny':'Więcej konkretnych sygnałów';
