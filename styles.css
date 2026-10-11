@@ -518,3 +518,16 @@ button,input,textarea,select{touch-action:manipulation}
 .analysis-next-step b{font-size:12px}
 .analysis-next-step p{font-size:12px;line-height:1.7;margin:5px 0 0;color:var(--muted)}
 @media(max-width:600px){.qualitative-rubric{grid-template-columns:1fr}.analysis-result-head{align-items:flex-start;flex-direction:column;gap:5px}}
+
+/* Confidence and evidence indicators for the coaching reflection analyzer */
+.analysis-confidence{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);margin:10px 0 12px}
+.analysis-confidence b{display:block;font-size:12px}
+.analysis-confidence p{margin:3px 0 0;color:var(--muted);font-size:11px;line-height:1.65}
+.confidence-dot{display:block;flex:0 0 9px;width:9px;height:9px;border-radius:50%;margin-top:4px;background:var(--muted)}
+.confidence-dot.wyższa{background:#36a879}
+.confidence-dot.umiarkowana{background:#d6a13c}
+.confidence-dot.niska{background:#d87575}
+.analysis-detected{margin:12px 0 14px}
+.analysis-signal-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.analysis-signal{display:inline-flex;align-items:center;padding:5px 8px;border:1px solid var(--line);border-radius:999px;background:var(--panel-2);font-size:10px;line-height:1.35;color:var(--text)}
+@media(max-width:600px){.analysis-confidence{padding:10px}.analysis-signal{font-size:10px}}
