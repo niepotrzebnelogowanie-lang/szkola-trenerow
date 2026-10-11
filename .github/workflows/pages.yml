@@ -30,6 +30,7 @@ jobs:
           cp supabase-config.js _site/supabase-config.js
           python3 - <<'PY'
           from pathlib import Path
+          import re
           root = Path("_site")
           html_path = root / "index.html"
           html = html_path.read_text(encoding="utf-8")
@@ -37,16 +38,32 @@ jobs:
           app = (root / "app.js").read_text(encoding="utf-8")
           auth = (root / "auth.js").read_text(encoding="utf-8")
           config = (root / "supabase-config.js").read_text(encoding="utf-8")
-          # Bundle assets directly into index.html so Pages cannot accidentally serve
-          # a shell without the app's CSS or JavaScript. This matches the tested
-          # self-contained HTML version while keeping one source package in the repo.
-          html = html.replace('<link rel="stylesheet" href="styles.css">', '<style>\n' + css + '\n</style>', 1)
-          html = html.replace('<script src="supabase-config.js"></script>', '<script>\n' + config + '\n</script>', 1)
-          html = html.replace('<script src="app.js"></script>', '<script>\n' + app + '\n</script>', 1)
-          html = html.replace('<script type="module" src="auth.js"></script>', '<script type="module">\n' + auth + '\n</script>', 1)
-          for marker in ('<style>', 'SZKOŁA TRENERÓW — offline-first educational prototype', 'from \'https://esm.sh/@supabase/supabase-js@2\''):
-              if marker not in html:
-                  raise SystemExit('Brak oczekiwanego elementu aplikacji: ' + marker)
+
+          # Embed assets robustly, regardless of ./ prefixes or tag attributes.
+          html, css_count = re.subn(
+              r'<link\\b(?=[^>]*\\bhref=["\\'][^"\\']*styles\\.css(?:\\?[^"\\']*)?["\\'])[^>]*>',
+              '<style>\\n' + css + '\\n</style>', html, count=1, flags=re.I
+          )
+          html, config_count = re.subn(
+              r'<script\\b(?=[^>]*\\bsrc=["\\'](?:\\./)?supabase-config\\.js(?:\\?[^"\\']*)?["\\'])[^>]*>\\s*</script>',
+              lambda m: '<script>\\n' + config + '\\n</script>', html, count=1, flags=re.I
+          )
+          html, app_count = re.subn(
+              r'<script\\b(?=[^>]*\\bsrc=["\\'](?:\\./)?app\\.js(?:\\?[^"\\']*)?["\\'])[^>]*>\\s*</script>',
+              lambda m: '<script>\\n' + app + '\\n</script>', html, count=1, flags=re.I
+          )
+          html, auth_count = re.subn(
+              r'<script\\b(?=[^>]*\\bsrc=["\\'](?:\\./)?auth\\.js(?:\\?[^"\\']*)?["\\'])[^>]*>\\s*</script>',
+              lambda m: '<script type="module">\\n' + auth + '\\n</script>', html, count=1, flags=re.I
+          )
+          if (css_count, config_count, app_count, auth_count) != (1, 1, 1, 1):
+              raise SystemExit(f"Nie udało się osadzić zasobów: CSS={css_count}, config={config_count}, app={app_count}, auth={auth_count}")
+          if '.app-shell' not in html or 'SZKOŁA TRENERÓW — offline-first educational prototype' not in html:
+              raise SystemExit("Wynik nie zawiera stylów lub skryptu aplikacji")
+          if re.search(r'<link\\b[^>]*href=["\\'][^"\\']*styles\\.css', html, flags=re.I):
+              raise SystemExit("Pozostał zewnętrzny arkusz CSS")
+          if re.search(r'<script\\b[^>]*src=["\\'](?:\\./)?(?:app|auth|supabase-config)\\.js', html, flags=re.I):
+              raise SystemExit("Pozostał zewnętrzny skrypt aplikacji")
           html_path.write_text(html, encoding="utf-8")
           PY
       - name: Setup Pages
