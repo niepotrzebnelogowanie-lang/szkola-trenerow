@@ -188,7 +188,14 @@ async function submitAuth(form) {
       const {data} = await supabase.auth.getUser(); currentUser=data.user; authButtonLabel(); closeAuth(); toastAuth('Hasło zostało zmienione.');
     }
   } catch (err) {
-    const msg = err?.message || 'Nie udało się wykonać operacji. Spróbuj ponownie.';
+    let msg = err?.message || 'Nie udało się wykonać operacji. Spróbuj ponownie.';
+    if (mode === 'login' && (err?.code === 'invalid_credentials' || /invalid login credentials/i.test(msg))) {
+      msg = 'Nieprawidłowy adres e-mail lub hasło. Jeśli nie pamiętasz hasła, wybierz „Nie pamiętam hasła”.';
+    } else if (/email not confirmed/i.test(msg)) {
+      msg = 'Adres e-mail nie jest jeszcze potwierdzony. Użyj najnowszego linku z wiadomości — starszy mógł już wygasnąć.';
+    } else if (/email link is invalid or has expired|one-time token not found/i.test(msg)) {
+      msg = 'Ten link został już wykorzystany lub wygasł. Nie klikaj go ponownie — wróć do strony i spróbuj się zalogować.';
+    }
     setMessage(msg, true);
     const activeSubmit = root.querySelector('[type="submit"]');
     if(activeSubmit){activeSubmit.disabled=false;activeSubmit.textContent=mode==='register'?'Utwórz konto':mode==='forgot'?'Wyślij link odzyskiwania':mode==='new-password'?'Zapisz nowe hasło':'Zaloguj się';}
