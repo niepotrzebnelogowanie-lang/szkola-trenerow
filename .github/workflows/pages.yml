@@ -1,0 +1,55 @@
+name: Build and deploy Szkola Trenerow to GitHub Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Prepare site from uploaded ZIP
+        run: |
+          test -f Szkola-trenerow-pakiet.zip
+          mkdir -p extracted _site
+          unzip -q Szkola-trenerow-pakiet.zip -d extracted
+          test -f extracted/szkola-trenerow/index.html
+          cp -a extracted/szkola-trenerow/. _site/
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path("_site/index.html")
+          html = path.read_text(encoding="utf-8")
+          old_button_location = '</label><div class="top-status">'
+          new_button_location = '</label><button id="auth-open" class="auth-trigger" type="button">Zaloguj się <span aria-hidden="true">↗</span></button><div class="top-status">'
+          if 'id="auth-open"' not in html:
+              if old_button_location not in html:
+                  raise SystemExit("Nie znaleziono miejsca na przycisk konta w index.html")
+              html = html.replace(old_button_location, new_button_location, 1)
+          old_scripts = '  <script src="app.js"></script>'
+          new_scripts = '  <script src="supabase-config.js"></script>\n  <script src="app.js"></script>\n  <script type="module" src="auth.js"></script>'
+          if 'src="auth.js"' not in html:
+              if old_scripts not in html:
+                  raise SystemExit("Nie znaleziono miejsca na skrypty aplikacji w index.html")
+              html = html.replace(old_scripts, new_scripts, 1)
+          path.write_text(html, encoding="utf-8")
+          PY
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
