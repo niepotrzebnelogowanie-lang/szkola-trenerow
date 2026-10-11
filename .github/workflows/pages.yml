@@ -19,32 +19,35 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Prepare site from uploaded ZIP
+      - name: Prepare the complete app as a self-contained page
         run: |
+          set -euo pipefail
           test -f Szkola-trenerow-pakiet.zip
           mkdir -p extracted _site
           unzip -q Szkola-trenerow-pakiet.zip -d extracted
           test -f extracted/szkola-trenerow/index.html
           cp -a extracted/szkola-trenerow/. _site/
-          # Root config is the single place to set the public Supabase URL and publishable key.
           cp supabase-config.js _site/supabase-config.js
           python3 - <<'PY'
           from pathlib import Path
-          path = Path("_site/index.html")
-          html = path.read_text(encoding="utf-8")
-          old_button_location = '</label><div class="top-status">'
-          new_button_location = '</label><button id="auth-open" class="auth-trigger" type="button">Zaloguj się <span aria-hidden="true">↗</span></button><div class="top-status">'
-          if 'id="auth-open"' not in html:
-              if old_button_location not in html:
-                  raise SystemExit("Nie znaleziono miejsca na przycisk konta w index.html")
-              html = html.replace(old_button_location, new_button_location, 1)
-          old_scripts = '  <script src="app.js"></script>'
-          new_scripts = '  <script src="supabase-config.js"></script>\n  <script src="app.js"></script>\n  <script type="module" src="auth.js"></script>'
-          if 'src="auth.js"' not in html:
-              if old_scripts not in html:
-                  raise SystemExit("Nie znaleziono miejsca na skrypty aplikacji w index.html")
-              html = html.replace(old_scripts, new_scripts, 1)
-          path.write_text(html, encoding="utf-8")
+          root = Path("_site")
+          html_path = root / "index.html"
+          html = html_path.read_text(encoding="utf-8")
+          css = (root / "styles.css").read_text(encoding="utf-8")
+          app = (root / "app.js").read_text(encoding="utf-8")
+          auth = (root / "auth.js").read_text(encoding="utf-8")
+          config = (root / "supabase-config.js").read_text(encoding="utf-8")
+          # Bundle assets directly into index.html so Pages cannot accidentally serve
+          # a shell without the app's CSS or JavaScript. This matches the tested
+          # self-contained HTML version while keeping one source package in the repo.
+          html = html.replace('<link rel="stylesheet" href="styles.css">', '<style>\\n' + css + '\\n</style>', 1)
+          html = html.replace('<script src="supabase-config.js"></script>', '<script>\\n' + config + '\\n</script>', 1)
+          html = html.replace('<script src="app.js"></script>', '<script>\\n' + app + '\\n</script>', 1)
+          html = html.replace('<script type="module" src="auth.js"></script>', '<script type="module">\\n' + auth + '\\n</script>', 1)
+          for marker in ('<style>', 'SZKOŁA TRENERÓW — offline-first educational prototype', 'from \'https://esm.sh/@supabase/supabase-js@2\''):
+              if marker not in html:
+                  raise SystemExit('Brak oczekiwanego elementu aplikacji: ' + marker)
+          html_path.write_text(html, encoding="utf-8")
           PY
       - name: Setup Pages
         uses: actions/configure-pages@v5
