@@ -360,7 +360,7 @@ function analyzeQuizReflection(l,text){
  const conceptMap={
   'model-gry':[['model gry','formac','zasad','fazy gry','moment gry'],['cel','wskazow','kryter','dowod','obserwow'],['przejsc','atak','obron','zabezpiec']],
   'build-up':[['budowani','4-4-2','dwoch napastnik','pierwsz lini','pressing'],['woln zawodnik','przewag','podani','progresj','kolejn lini'],['asekur','strat','centrum','bramkarz']],
-  'pressing':[['wyzwalacz','sygnal','podani wstecz','przyjecie','zle przyjecie'],['kierunek','zamkn','linia podani','sideline','skierowac'],['doskok','asekur','odleglosc','zabezpiec','pressing']],
+  'pressing':[['wyzwalacz','sygnal','podani wstecz','przyjecie','zle przyjecie','przyjmuj tylem','przyjeciu tylem'],['kierunek','zamyk','linia podani','sideline','skierowac','podani do srodka','boczn stref'],['doskok','asekur','odleglosc','zabezpiec']],
   'transitions':[['strat','odbior','przejsc','pierwsz sek'],['kontrpress','powrot','szybki atak','glebie','przewag'],['zabezpiecz','centrum','atakowac przestrzen','utrzymac pilke']],
   'low-block':[['niski blok','blok obron','linia obron','obrona niska'],['szerokosc','zmian strony','polprzestrzen','centrum','przesunac'],['wbieg','dosrodk','cutback','druga pilka','asekur']],
   'microcycle':[['md+1','md-1','mikrocykl','dzien mecz','dzien po meczu'],['obciazen','regenerac','intensywnosc','zmeczen','odpoczynek'],['cel jednostki','indywidualiz','liczba zawodnik','czas pracy','monitor']],
@@ -372,11 +372,17 @@ function analyzeQuizReflection(l,text){
  const groups=conceptMap[l.id]||[];
  const matchedGroups=groups.filter(group=>containsAny(group));
  const conceptScore=groups.length?(matchedGroups.length>=2?2:matchedGroups.length===1?1:0):(tacticalConcept?1:0);
- const reasoningScore=causal&&tacticalConcept&&sentences>=2?2:(causal||((sentences>=3)&&tacticalConcept)?1:0);
- const evidenceScore=observable&&measurable?2:(observable||measurable?1:0);
+ const topicEvidence=matchedGroups.length;
+ const relevanceCap=topicEvidence>=2?2:1;
+ const reasoningRaw=causal&&tacticalConcept&&sentences>=2?2:(causal||((sentences>=3)&&tacticalConcept)?1:0);
+ const reasoningScore=Math.min(reasoningRaw,relevanceCap);
+ const evidenceRaw=observable&&measurable?2:(observable||measurable?1:0);
+ const evidenceScore=Math.min(evidenceRaw,relevanceCap);
  const tailoredTrainingDetail=trainingDetail||(l.id==='microcycle'&&has(/\b(md\+1|md-1|mikrocykl\w*|obciazen\w*|regenerac\w*|intensywnosc\w*|minut\w* rozegran\w*|cel jednostki)\b/))||(l.id==='coaching'&&has(/\b(komunikat\w*|pytani\w*|instrukcj\w*|wskazowk\w*|informacj zwrotn\w*)\b/))||(l.id==='player-development'&&has(/\b(cel rozwoj\w*|nastepny krok|cwiczen\w*|zadanie\w*|warunek\w*)\b/))||(l.id==='opponent-analysis'&&has(/\b(wideo|plan mecz\w*|raport\w*|obserwac\w*|notuj\w*|wzorzec\w*)\b/));
- const transferScore=trainingContext&&tacticalConcept&&tailoredTrainingDetail?2:(trainingContext&&tacticalConcept?1:0);
- const adaptationScore=opponentResponse?2:((conditional&&responseAction)||(opponentContext&&responseAction)?1:0);
+ const transferRaw=trainingContext&&tacticalConcept&&tailoredTrainingDetail?2:(trainingContext&&tacticalConcept?1:0);
+ const transferScore=Math.min(transferRaw,relevanceCap);
+ const adaptationRaw=opponentResponse?2:((conditional&&responseAction)||(opponentContext&&responseAction)?1:0);
+ const adaptationScore=Math.min(adaptationRaw,relevanceCap);
  const criteria=[
   {name:'Rozumienie zasady',score:conceptScore,max:2,detail:conceptScore===2?'Odpowiedź nawiązuje do kilku kluczowych zagadnień tej lekcji.':conceptScore===1?'Widać przynajmniej jeden punkt styczny z tematem; nazwij dokładniej zasadę i sytuację, w której ją stosujesz.':'Nie wykryto wyraźnego powiązania z kluczowymi zagadnieniami tej lekcji. Wyjaśnij, jaki problem gry rozwiązujesz.'},
   {name:'Uzasadnienie decyzji',score:reasoningScore,max:2,detail:reasoningScore===2?'Łączysz zasadę taktyczną z przyczyną i przewidywanym skutkiem.':reasoningScore===1?'Pojawia się wyjaśnienie, ale doprecyzuj związek: co robi rywal, jak odpowiadasz i dlaczego to ma pomóc.':'Dopisz mechanizm decyzji: co zmienia się w ustawieniu lub zachowaniu rywala i jak twoja decyzja to wykorzysta.'},
@@ -387,7 +393,7 @@ function analyzeQuizReflection(l,text){
  const score=criteria.reduce((sum,c)=>sum+c.score,0);
  const specificSignals=[tacticalConcept,observable,trainingDetail,opponentResponse].filter(Boolean).length;
  const shortAnswer=wordCount<18||sentences<2;
- const confidence=wordCount<18||sentences<2?'niska':(matchedGroups.length===0||specificSignals<2?'umiarkowana':'wyższa');
+ const confidence=wordCount<18||sentences<2?'niska':(matchedGroups.length<2||specificSignals<2?'umiarkowana':'wyższa');
  const confidenceLabel=confidence==='niska'?'Mało danych':confidence==='umiarkowana'?'Wynik orientacyjny':'Więcej konkretnych sygnałów';
  const strengths=criteria.filter(c=>c.score===2).map(c=>c.name+': '+c.detail);
  if(!strengths.length) strengths.push('Masz punkt wyjścia. Największy postęp da dopisanie konkretnej sytuacji, decyzji i dowodu z gry.');
@@ -403,7 +409,7 @@ function analyzeQuizReflection(l,text){
  if(observable||measurable) detected.push('obserwacja lub kryterium');
  if(trainingContext&&tacticalConcept) detected.push('zastosowanie w treningu');
  if(opponentResponse) detected.push('adaptacja do zmiany sytuacji');
- const reliabilityMessage=confidence==='niska'?'System ma za mało informacji, aby mocno ufać wynikowi. Potraktuj go jako sygnał, co dopisać, a nie ocenę twojej wiedzy.':confidence==='umiarkowana'?'Część elementów jest widoczna, ale wynik może nie rozpoznać poprawnej parafrazy albo zbyt ogólnie opisanej sytuacji.':'Odpowiedź zawiera kilka różnych sygnałów, ale analiza nadal opiera się na regułach językowych, nie na pełnym rozumieniu taktyki.';
+ const reliabilityMessage=confidence==='niska'?'System ma za mało informacji, aby mocno ufać wynikowi. Potraktuj go jako sygnał, co dopisać, a nie ocenę twojej wiedzy.':matchedGroups.length<2?'Powiązanie z tematem tej lekcji jest słabe lub niejednoznaczne, dlatego pozostałe kryteria nie mogą dostać pełnych punktów. Doprecyzuj zasadę z tej lekcji.':confidence==='umiarkowana'?'Część elementów jest widoczna, ale wynik może nie rozpoznać poprawnej parafrazy albo zbyt ogólnie opisanej sytuacji.':'Odpowiedź zawiera kilka różnych sygnałów, ale analiza nadal opiera się na regułach językowych, nie na pełnym rozumieniu taktyki.';
  return {version:2,score,maxScore:10,criteria,strengths,improve:uniqueImprove,matched:matchedGroups.flat(),matchedGroups:matchedGroups.length,wordCount,sentenceCount:sentences,level,nextStep:next.score<2?next.name:'Dodaj trudniejszy wariant i sprawdź, czy zasada działa przeciw innemu zachowaniu rywala.',confidence,confidenceLabel,detected,reliabilityMessage,note:'To lokalna analiza heurystyczna. Nie rozumie w pełni sensu wypowiedzi i może pomijać dobre parafrazy lub rozpoznawać nietrafione sygnały. Wynik jest wskazówką do nauki, nie oceną szkolną ani egzaminacyjną.'};
 }
 function renderQuizReflection(l,result){
