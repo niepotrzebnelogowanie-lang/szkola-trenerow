@@ -9,8 +9,8 @@ const start = app.indexOf('function analyzeQuizReflection(l,text){');
 const end = app.indexOf('\nfunction renderQuizReflection', start);
 assert(start >= 0 && end > start, 'Could not locate analyzeQuizReflection in app.js');
 const source = app.slice(start, end);
-assert(source.includes('version:2'), 'Analyzer version must be explicit');
-assert(app.includes('analysis.version===2'), 'UI must identify outdated saved analyses');
+assert(source.includes('version:3'), 'Analyzer version must be explicit');
+assert(app.includes('analysis.version===3'), 'UI must identify outdated saved analyses');
 const analyze = vm.runInNewContext('(' + source + ')');
 
 const strongAnswers = {
@@ -34,7 +34,7 @@ for (const [id, answer] of Object.entries(strongAnswers)) {
   const result = analyze({ id, outcomes: [], principles: [], sections: [] }, answer);
   assert(result.score >= 7, id + ': developed answer should score at least 7/10, got ' + result.score);
   assert.equal(result.score, result.criteria.reduce((sum, criterion) => sum + criterion.score, 0), id + ': total must equal sum of rubric criteria');
-  assert.equal(result.version, 2, id + ': analysis version must be recorded');
+  assert.equal(result.version, 3, id + ': analysis version must be recorded');
   assert.equal(result.criteria.length, 5, id + ': expected five rubric dimensions');
   assert(result.strengths.length > 0, id + ': strengths feedback must not be empty');
   assert(result.improve.length <= 4, id + ': improvement list should stay actionable');
@@ -56,4 +56,10 @@ const adaptive = analyze({ id: 'build-up', outcomes: [], principles: [], section
 assert.equal(adaptive.criteria.find(item => item.name === 'Adaptacja i wariant').score, 2, 'specific opponent adaptation should score fully');
 checks += 1;
 
-console.log('PASS: ' + checks + ' coaching-reflection regression assertions across 10 lesson topics, generic answers, short answers and rubric consistency.');
+const offTopic = analyze({ id: 'pressing', outcomes: [], principles: [], sections: [] }, 'W mikrocyklu MD+1 priorytetem jest regeneracja, a obciążenie zależy od minut rozegranych przez zawodników. Na treningu grupuję zawodników według czasu gry i monitoruję obciążenie oraz samopoczucie. Sprawdzam, czy planowana intensywność odpowiada celowi jednostki. Jeśli rywal zmieni pressing, zabezpieczamy centrum.');
+assert(offTopic.score <= 5, 'A response focused on a different lesson must not score highly for pressing, got ' + offTopic.score);
+assert.equal(offTopic.score, offTopic.criteria.reduce((sum, criterion) => sum + criterion.score, 0), 'off-topic score must still equal rubric sum');
+assert.equal(offTopic.confidence, 'umiarkowana', 'weak lesson relevance should lower confidence');
+checks += 3;
+
+console.log('PASS: ' + checks + ' coaching-reflection regression assertions across 10 lesson topics, generic answers, short answers, off-topic false positives and rubric consistency.');
