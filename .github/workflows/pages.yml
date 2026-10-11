@@ -37,14 +37,74 @@ jobs:
           app = (root / "app.js").read_text(encoding="utf-8")
           auth = (root / "auth.js").read_text(encoding="utf-8")
           config = (root / "supabase-config.js").read_text(encoding="utf-8")
+
+          # Add Google OAuth to the existing email/password login modal.
+          css += """
+          .auth-google-button {
+            width: 100%; min-height: 46px; display: flex; align-items: center;
+            justify-content: center; gap: 10px; margin: 0 0 12px; padding: 11px 16px;
+            border: 1px solid #d7dce5; border-radius: 12px; background: #fff;
+            color: #172033; font: inherit; font-weight: 650; cursor: pointer;
+            transition: border-color .15s ease, background .15s ease;
+          }
+          .auth-google-button:hover { border-color: #9aa8bd; background: #f8fafc; }
+          .auth-google-button:disabled { opacity: .6; cursor: wait; }
+          .google-mark {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 23px; height: 23px; border-radius: 50%; background: #fff;
+            color: #4285f4; font: 800 19px/1 Arial, sans-serif;
+          }
+          .auth-google-divider {
+            display: flex; align-items: center; gap: 12px; margin: 3px 0 15px;
+            color: #8b95a7; font-size: 10px; font-weight: 700;
+            letter-spacing: .09em; text-transform: uppercase;
+          }
+          .auth-google-divider::before, .auth-google-divider::after {
+            content: ""; height: 1px; background: #e2e7ef; flex: 1;
+          }
+          """
+
+          google_markup = """        ${mode==='login'||mode==='register'?'<button type="button" class="auth-google-button" data-auth-google '+(configured?'':'disabled')+'><span class="google-mark" aria-hidden="true">G</span><span>Kontynuuj z Google</span></button><div class="auth-google-divider">lub przez e-mail</div>':''}
+          <form id="auth-form" novalidate>"""
+          form_target = '        <form id="auth-form" novalidate>'
+          if form_target not in auth:
+              raise SystemExit("Nie znaleziono formularza logowania w auth.js")
+          auth = auth.replace(form_target, google_markup, 1)
+
+          google_handler = """  const googleButton = e.target.closest('[data-auth-google]');
+          if (googleButton) {
+            if (!supabase) {
+              setMessage('Logowanie nie jest jeszcze skonfigurowane.', true);
+              return;
+            }
+            googleButton.disabled = true;
+            googleButton.innerHTML = '<span class="google-mark" aria-hidden="true">G</span><span>Łączenie z Google…</span>';
+            try {
+              const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: { redirectTo: window.location.origin + window.location.pathname }
+              });
+              if (error) throw error;
+            } catch (err) {
+              setMessage(err?.message || 'Nie udało się uruchomić logowania przez Google.', true);
+              googleButton.disabled = false;
+              googleButton.innerHTML = '<span class="google-mark" aria-hidden="true">G</span><span>Kontynuuj z Google</span>';
+            }
+            return;
+          }
+          """
+          click_target = "root.addEventListener('click', async e => {\n  if (e.target.closest('[data-auth-close]'))"
+          if click_target not in auth:
+              raise SystemExit("Nie znaleziono obsługi kliknięć w auth.js")
+          auth = auth.replace(click_target, "root.addEventListener('click', async e => {\n" + google_handler + "  if (e.target.closest('[data-auth-close]'))", 1)
+
           # Bundle assets directly into index.html so Pages cannot accidentally serve
-          # a shell without the app's CSS or JavaScript. This matches the tested
-          # self-contained HTML version while keeping one source package in the repo.
-          html = html.replace('<link rel="stylesheet" href="styles.css">', '<style>\n' + css + '\n</style>', 1)
-          html = html.replace('<script src="supabase-config.js"></script>', '<script>\n' + config + '\n</script>', 1)
-          html = html.replace('<script src="app.js"></script>', '<script>\n' + app + '\n</script>', 1)
-          html = html.replace('<script type="module" src="auth.js"></script>', '<script type="module">\n' + auth + '\n</script>', 1)
-          for marker in ('<style>', 'SZKOŁA TRENERÓW — offline-first educational prototype', 'from \'https://esm.sh/@supabase/supabase-js@2\''):
+          # a shell without the app's CSS or JavaScript.
+          html = html.replace('<link rel="stylesheet" href="styles.css">', '<style>\\n' + css + '\\n</style>', 1)
+          html = html.replace('<script src="supabase-config.js"></script>', '<script>\\n' + config + '\\n</script>', 1)
+          html = html.replace('<script src="app.js"></script>', '<script>\\n' + app + '\\n</script>', 1)
+          html = html.replace('<script type="module" src="auth.js"></script>', '<script type="module">\\n' + auth + '\\n</script>', 1)
+          for marker in ('<style>', 'SZKOŁA TRENERÓW — offline-first educational prototype', 'from \\'https://esm.sh/@supabase/supabase-js@2\\'', 'data-auth-google'):
               if marker not in html:
                   raise SystemExit('Brak oczekiwanego elementu aplikacji: ' + marker)
           html_path.write_text(html, encoding="utf-8")
