@@ -531,3 +531,6 @@ button,input,textarea,select{touch-action:manipulation}
 .analysis-signal-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
 .analysis-signal{display:inline-flex;align-items:center;padding:5px 8px;border:1px solid var(--line);border-radius:999px;background:var(--panel-2);font-size:10px;line-height:1.35;color:var(--text)}
 @media(max-width:600px){.analysis-confidence{padding:10px}.analysis-signal{font-size:10px}}
+
+.analysis-stale-note{padding:9px 10px;border:1px solid #d6a13c66;border-radius:8px;background:var(--panel-2);color:var(--text);font-size:11px;line-height:1.6;margin:0 0 12px}
+.quiz-analysis-result.is-stale{border-color:#d6a13c88}
