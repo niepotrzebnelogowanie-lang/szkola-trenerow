@@ -82,6 +82,14 @@ function showAuth(mode='login', message='') {
   setTimeout(() => root.querySelector('input:not([disabled])')?.focus(), 30);
 }
 
+function hasLocalWork(store) {
+  if (!store || !window.SzkolaApp) return false;
+  const baseline = window.SzkolaApp.defaultStore();
+  const keys = new Set([...Object.keys(baseline), ...Object.keys(store)]);
+  keys.delete('_updatedAt');
+  return [...keys].some(key => JSON.stringify(store[key] ?? null) !== JSON.stringify(baseline[key] ?? null));
+}
+
 async function syncFromCloud(user) {
   if (!supabase || !user || syncing || !window.SzkolaApp) return;
   syncing = true;
@@ -91,22 +99,22 @@ async function syncFromCloud(user) {
     if (error) throw error;
     const localRaw = localStorage.getItem(app.storeKey);
     const local = localRaw ? JSON.parse(localRaw) : null;
+    const localHasWork = hasLocalWork(app.store);
     if (data?.data && typeof data.data === 'object') {
-      // Preserve unsynced work before switching identity on a shared browser.
-      if (local && ((local.completedLessons||[]).length || (local.journal||[]).length || (local.players||[]).length || Object.keys(local.analysisWork||{}).length || Object.keys(local.practiceSubmissions||{}).length)) {
-        localStorage.setItem('szkola-trenerow-local-backup-before-account', JSON.stringify(local));
+      // Preserve every kind of unsynced work before switching identity on a shared browser.
+      if (localHasWork) {
+        localStorage.setItem('szkola-trenerow-local-backup-before-account', JSON.stringify(app.store));
       }
       // Cloud data wins on sign-in to avoid uploading data left by another user on a shared device.
       const cloudData = {...data.data, _updatedAt: data.updated_at || data.data._updatedAt || new Date().toISOString()};
       app.replaceStore(cloudData);
       toastAuth('Postępy pobrane z Twojego konta.');
     } else {
-      const hasLocalWork = local && ((local.completedLessons||[]).length || (local.journal||[]).length || (local.players||[]).length || Object.keys(local.analysisWork||{}).length || Object.keys(local.practiceSubmissions||{}).length);
-      if (hasLocalWork && window.confirm('To konto nie ma jeszcze zapisanych postępów. Czy przenieść na nie dane z tej przeglądarki? Wybierz „Anuluj”, aby zachować lokalną kopię i zacząć na koncie od czystego warsztatu.')) {
+      if (localHasWork && window.confirm('To konto nie ma jeszcze zapisanych postępów. Czy przenieść na nie dane z tej przeglądarki? Wybierz „Anuluj”, aby zachować lokalną kopię i zacząć na koncie od czystego warsztatu.')) {
         await writeCloud(user, app.store);
         toastAuth('Lokalne postępy zostały przeniesione na konto.');
-      } else if (hasLocalWork) {
-        localStorage.setItem('szkola-trenerow-local-backup-before-account', JSON.stringify(local));
+      } else if (localHasWork) {
+        localStorage.setItem('szkola-trenerow-local-backup-before-account', JSON.stringify(app.store));
         app.replaceStore(app.defaultStore());
         await writeCloud(user, app.store);
         toastAuth('Konto zaczyna od czystego warsztatu. Lokalną kopię zachowano w tej przeglądarce.');
