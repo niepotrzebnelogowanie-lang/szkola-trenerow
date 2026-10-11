@@ -402,7 +402,7 @@ function analyzeQuizReflection(l,text){
  if(causal&&tacticalConcept) detected.push('uzasadnienie taktyczne');
  if(observable||measurable) detected.push('obserwacja lub kryterium');
  if(trainingContext&&tacticalConcept) detected.push('zastosowanie w treningu');
- if(opponentResponse) detected.push('reakcja na zachowanie rywala');
+ if(opponentResponse) detected.push('adaptacja do zmiany sytuacji');
  const reliabilityMessage=confidence==='niska'?'System ma za mało informacji, aby mocno ufać wynikowi. Potraktuj go jako sygnał, co dopisać, a nie ocenę twojej wiedzy.':confidence==='umiarkowana'?'Część elementów jest widoczna, ale wynik może nie rozpoznać poprawnej parafrazy albo zbyt ogólnie opisanej sytuacji.':'Odpowiedź zawiera kilka różnych sygnałów, ale analiza nadal opiera się na regułach językowych, nie na pełnym rozumieniu taktyki.';
  return {score,maxScore:10,criteria,strengths,improve:uniqueImprove,matched:matchedGroups.flat(),matchedGroups:matchedGroups.length,wordCount,sentenceCount:sentences,level,nextStep:next.score<2?next.name:'Dodaj trudniejszy wariant i sprawdź, czy zasada działa przeciw innemu zachowaniu rywala.',confidence,confidenceLabel,detected,reliabilityMessage,note:'To lokalna analiza heurystyczna. Nie rozumie w pełni sensu wypowiedzi i może pomijać dobre parafrazy lub rozpoznawać nietrafione sygnały. Wynik jest wskazówką do nauki, nie oceną szkolną ani egzaminacyjną.'};
 }
