@@ -502,3 +502,19 @@ button,input,textarea,select{touch-action:manipulation}
 .quiz-analysis-result h4{font-size:12px;margin:12px 0 6px}
 .quiz-analysis-result ul{margin:0;padding-left:19px;color:var(--muted);font-size:12px;line-height:1.75}
 .quiz-analysis-result .field-hint{margin:12px 0 0}
+
+
+/* Qualitative coaching-answer rubric */
+.analysis-score{font-size:12px;font-weight:800;color:var(--text)}
+.analysis-summary{font-size:12px;line-height:1.7;color:var(--muted);margin:7px 0 13px}
+.qualitative-rubric{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:12px 0 16px}
+.qualitative-criterion{min-width:0;padding:11px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}
+.criterion-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;font-size:12px}
+.criterion-points{white-space:nowrap;font-size:11px;font-weight:800;color:var(--muted)}
+.criterion-track{height:5px;margin:8px 0;background:var(--line);border-radius:999px;overflow:hidden}
+.criterion-track span{display:block;height:100%;background:var(--blue);border-radius:999px}
+.qualitative-criterion p{margin:0;font-size:11px;line-height:1.65;color:var(--muted)}
+.analysis-next-step{margin-top:12px;padding:12px;border-left:3px solid var(--blue);border-radius:6px;background:var(--panel-2)}
+.analysis-next-step b{font-size:12px}
+.analysis-next-step p{font-size:12px;line-height:1.7;margin:5px 0 0;color:var(--muted)}
+@media(max-width:600px){.qualitative-rubric{grid-template-columns:1fr}.analysis-result-head{align-items:flex-start;flex-direction:column;gap:5px}}
