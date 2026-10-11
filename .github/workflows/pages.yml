@@ -1,17 +1,20 @@
-name: Build and deploy Szkola Trenerow to GitHub Pages
+name: Test and deploy Szkola Trenerow
 on:
   push:
     branches: [main]
   workflow_dispatch:
+
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
+
 concurrency:
   group: github-pages
   cancel-in-progress: true
+
 jobs:
-  deploy:
+  verify-and-deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -19,54 +22,58 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Extract the complete app
+
+      - name: Prepare site from canonical root files
         run: |
           set -euo pipefail
-          test -f Szkola-trenerow-pakiet.zip
-          mkdir -p extracted _site
-          unzip -q Szkola-trenerow-pakiet.zip -d extracted
-          test -f extracted/szkola-trenerow/index.html
-          test -f extracted/szkola-trenerow/styles.css
-          test -f extracted/szkola-trenerow/app.js
-          test -f extracted/szkola-trenerow/auth.js
-          cp -a extracted/szkola-trenerow/. _site/
-          cp supabase-config.js _site/supabase-config.js
-          # Fail before deployment if the HTML points to missing local assets.
+          mkdir -p _site
+          for file in index.html styles.css app.js auth.js supabase-config.js favicon.svg; do
+            test -s "$file" || { echo "::error::Missing or empty required file: $file"; exit 1; }
+            cp "$file" _site/
+          done
+
+      - name: Check JavaScript syntax
+        run: |
+          set -euo pipefail
+          node --check _site/app.js
+          node --check _site/auth.js
+
+      - name: Check HTML references and app structure
+        run: |
           python3 - <<'PY'
           from pathlib import Path
+          from html.parser import HTMLParser
           import re
           root = Path("_site")
           html = (root / "index.html").read_text(encoding="utf-8")
-          for name in ("styles.css", "app.js", "auth.js", "supabase-config.js"):
-              if not (root / name).is_file():
-                  raise SystemExit(f"Missing deployed asset: {name}")
-          if 'href="styles.css"' not in html or 'src="app.js"' not in html or 'src="auth.js"' not in html:
-              raise SystemExit("The app HTML does not contain the expected asset references")
-          print("Verified: index.html, styles.css, app.js, auth.js and Supabase config are together in _site.")
+          required = ['id="view-root"', 'id="modal-root"', 'id="toast-root"',
+                      'src="supabase-config.js"', 'src="app.js"', 'src="auth.js"',
+                      'href="styles.css"']
+          missing = [item for item in required if item not in html]
+          if missing:
+              raise SystemExit("Required app structure missing: " + ", ".join(missing))
+          refs = re.findall(r'''(?:src|href)\s*=\s*["']([^"']+)["']''', html, re.I)
+          for ref in refs:
+              ref = ref.strip()
+              if not ref or ref.startswith(("#", "//")) or re.match(r"^[a-z][a-z0-9+.-]*:", ref, re.I):
+                  continue
+              path = ref.split("?", 1)[0].split("#", 1)[0]
+              if not path:
+                  continue
+              target = (root / path.lstrip("/")).resolve()
+              if not target.is_file():
+                  raise SystemExit(f"Local HTML asset not found: {ref}")
+          print(f"PASS: required app structure and {len(refs)} local/external HTML references checked.")
           PY
-      - name: Sync complete app files to repository root
-        run: |
-          set -euo pipefail
-          cp extracted/szkola-trenerow/index.html ./index.html
-          cp extracted/szkola-trenerow/styles.css ./styles.css
-          cp extracted/szkola-trenerow/app.js ./app.js
-          cp extracted/szkola-trenerow/auth.js ./auth.js
-          cp extracted/szkola-trenerow/favicon.svg ./favicon.svg
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html styles.css app.js auth.js favicon.svg supabase-config.js
-          if ! git diff --cached --quiet; then
-            git commit -m "Publish complete app files at repository root"
-            git push
-          else
-            echo "Root app files are already up to date."
-          fi
-      - name: Setup Pages
+
+      - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-      - name: Upload site artifact
+
+      - name: Upload verified site
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
-      - name: Deploy to GitHub Pages
+
+      - name: Deploy verified site
         id: deployment
         uses: actions/deploy-pages@v4
