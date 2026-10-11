@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f6fb">
+  <meta name="description" content="Szkoła trenerów — praktyczna akademia taktyki, organizacji zespołu i rozwoju trenerskiego.">
+  <title>Szkoła trenerów — Akademia gry</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a href="#dashboard" class="brand" data-nav="dashboard" aria-label="Szkoła trenerów — strona główna">
+        <span class="brand-mark"><svg viewBox="0 0 44 44" aria-hidden="true"><path d="M22 3 38 12v20L22 41 6 32V12Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M22 11 30 16v12l-8 5-8-5V16Z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m22 11 0 9m8-4-8 4-8-4m0 12 8-8 8 8" stroke="currentColor" stroke-width="1.4" fill="none"/></svg></span>
+        <span class="brand-copy"><strong>SZKOŁA</strong><span>TRENERÓW <i> / ACADEMY</i></span></span>
+      </a>
+      <div class="side-label">CENTRUM TRENERA</div>
+      <nav class="nav-list" aria-label="Główna nawigacja">
+        <button class="nav-item active" data-nav="dashboard"><span class="nav-icon">◫</span><span>Panel główny</span><span class="nav-end">01</span></button>
+        <button class="nav-item" data-nav="academy"><span class="nav-icon">▤</span><span>Akademia</span><span class="nav-end">02</span></button>
+        <button class="nav-item" data-nav="analysis"><span class="nav-icon">⌁</span><span>Analizy taktyczne</span><span class="nav-end">03</span></button>
+        <button class="nav-item" data-nav="board"><span class="nav-icon">▦</span><span>Tablica taktyczna</span><span class="nav-end">04</span></button>
+        <div class="side-label side-label-spaced">WARSZTAT TRENERA</div>
+        <button class="nav-item" data-nav="planning"><span class="nav-icon">▦</span><span>Planowanie treningu</span></button>
+        <button class="nav-item" data-nav="scouting"><span class="nav-icon">⌕</span><span>Skauting rywala</span></button>
+        <button class="nav-item" data-nav="players"><span class="nav-icon">♙</span><span>Rozwój zawodników</span></button>
+        <button class="nav-item" data-nav="philosophy"><span class="nav-icon">◎</span><span>Filozofia gry</span></button>
+        <button class="nav-item" data-nav="journal"><span class="nav-icon">▧</span><span>Dziennik trenera</span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-motto"><span class="motto-line"></span><p>POZNAJ GRĘ.<br><b>ROZWIJAJ DRUŻYNĘ.</b></p><span class="motto-dot"></span></div>
+        <div class="profile-mini"><div class="avatar">ST</div><div><strong>Twój warsztat</strong><span>Profil lokalny</span></div><button class="icon-button tiny" data-nav="philosophy" aria-label="Otwórz profil">↗</button></div>
+      </div>
+    </aside>
+    <button class="sidebar-overlay" id="sidebar-overlay" aria-label="Zamknij menu"></button>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div class="topbar-left"><button class="mobile-menu icon-button" id="mobile-menu" aria-label="Otwórz menu">☰</button><span class="eyebrow" id="breadcrumb">CENTRUM TRENERA</span><span class="top-divider">/</span><span class="top-current" id="top-current">Panel główny</span></div>
+        <div class="topbar-right"><button class="auth-trigger" id="auth-open" type="button">Zaloguj się <span aria-hidden="true">↗</span></button><label class="search-box"><span>⌕</span><input id="global-search" type="search" placeholder="Szukaj tematu, zasady, lekcji…" aria-label="Szukaj w akademii"><kbd>Ctrl / ⌘ K</kbd></label><div class="top-status"><span class="status-dot"></span> TRYB NAUKI</div></div>
+      </header>
+      <div id="view-root" class="view-root" tabindex="-1"></div>
+      <footer class="app-footer"><span>© SZKOŁA TRENERÓW · WARSZTAT ZACZYNA SIĘ OD PYTAŃ</span><span>WERSJA EDUKACYJNA <b>01.7</b></span></footer>
+    </main>
+  </div>
+  <div id="toast-root" class="toast-root" aria-live="polite"></div>
+  <div id="modal-root"></div>
+  <script src="supabase-config.js"></script>
+  <script src="app.js"></script>
+  <script type="module" src="auth.js"></script>
+</body>
+</html>
