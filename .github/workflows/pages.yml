@@ -26,6 +26,8 @@ jobs:
           unzip -q Szkola-trenerow-pakiet.zip -d extracted
           test -f extracted/szkola-trenerow/index.html
           cp -a extracted/szkola-trenerow/. _site/
+          # Root config is the single place to set the public Supabase URL and publishable key.
+          cp supabase-config.js _site/supabase-config.js
           python3 - <<'PY'
           from pathlib import Path
           path = Path("_site/index.html")
