@@ -172,7 +172,7 @@ async function submitAuth(form) {
       const {data,error} = await supabase.auth.signUp({email,password,options:{emailRedirectTo:authRedirectUrl()}});
       if (error) throw error;
       if (data.session) { currentUser=data.user; authButtonLabel(); closeAuth(); await syncFromCloud(currentUser); toastAuth('Konto utworzone i zalogowane.'); }
-      else showAuth('login','Jeśli konto jest nowe, sprawdź skrzynkę e-mail. Jeśli zakładałeś już konto, zaloguj się lub wybierz „Nie pamiętam hasła” — ponowna rejestracja nie wyśle nowego linku.');
+      else showAuth('login','Jeśli konto jest nowe, sprawdź skrzynkę e-mail. Jeśli konto było już potwierdzone, zaloguj się lub wybierz „Nie pamiętam hasła” — ponowna rejestracja nie wyśle nowego linku potwierdzającego.');
     } else if (mode==='login') {
       const {data,error} = await supabase.auth.signInWithPassword({email,password});
       if (error) throw error;
