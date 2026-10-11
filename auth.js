@@ -17,6 +17,10 @@ if (configured) {
 
 const safe = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const emailValid = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+// Confirmation and password-reset links must return to the published app, not
+// a local preview such as http://localhost:3000 on the device that registered.
+const PRODUCTION_APP_URL = 'https://niepotrzebnelogowanie-lang.github.io/szkola-trenerow/';
+const authRedirectUrl = (query = '') => PRODUCTION_APP_URL + query;
 function authButtonLabel() {
   const button = document.getElementById('auth-open');
   if (!button) return;
@@ -165,7 +169,7 @@ async function submitAuth(form) {
   submit.disabled = true; submit.textContent = 'Przetwarzanie…';
   try {
     if (mode==='register') {
-      const {data,error} = await supabase.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+window.location.pathname}});
+      const {data,error} = await supabase.auth.signUp({email,password,options:{emailRedirectTo:authRedirectUrl()}});
       if (error) throw error;
       if (data.session) { currentUser=data.user; authButtonLabel(); closeAuth(); await syncFromCloud(currentUser); toastAuth('Konto utworzone i zalogowane.'); }
       else showAuth('login','Konto utworzone. Sprawdź skrzynkę e-mail i kliknij link weryfikacyjny przed zalogowaniem.');
@@ -174,7 +178,7 @@ async function submitAuth(form) {
       if (error) throw error;
       currentUser=data.user; authButtonLabel(); closeAuth(); await syncFromCloud(currentUser); toastAuth('Zalogowano pomyślnie.');
     } else if (mode==='forgot') {
-      const {error} = await supabase.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname+'?reset=1'});
+      const {error} = await supabase.auth.resetPasswordForEmail(email,{redirectTo:authRedirectUrl('?reset=1')});
       if (error) throw error;
       showAuth('login','Jeśli konto z tym adresem istnieje, wysłaliśmy wiadomość z linkiem do zmiany hasła. Sprawdź też spam.');
     } else if (mode==='new-password') {
