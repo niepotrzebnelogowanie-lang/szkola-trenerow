@@ -344,16 +344,16 @@ function analyzeQuizReflection(l,text){
  const has=pattern=>pattern.test(normalized);
  const causal=has(/\b(poniewaz|dlatego|bo|dzieki|gdy|jesli|jezeli|pozwala|umozliwia|wtedy|wynika|skutkiem|aby|zeby|przez to|co sprawia)\b/);
  const conditional=has(/\b(jezeli|jesli|gdy|kiedy|w przypadku|natomiast|z kolei|jesli rywal|gdy rywal|alternatyw|wariant|jesli nie|jesli przeciwnik)\b/);
- const transfer=has(/\b(trening|cwiczen|boisk|zawodnik|mecz|rywal|przeciwnik|sytuac|podani|press|asekur|decyzj|przestrzen|linij|gra|zespol|bramk|atak|obron|pilk|broni|napastnik|pomocnik|skrzydl|ustawieni)\b/);
+ const trainingContext=has(/\b(trening\w*|cwiczen\w*|boisk\w*|mecz\w*|gra zadaniow\w*|jednostk\w*)\b/);\n const footballConcept=has(/\b(podani\w*|press\w*|asekur\w*|przestrzen\w*|lini\w*|bramk\w*|atak\w*|obron\w*|pilk\w*|przewag\w*|woln\w*|przyjec\w*|budowani\w*|odbi\w*|strat\w*|kontr\w*|szerokos\w*|glebi\w*|centrum\w*)\b/);\n const transfer=trainingContext&&footballConcept;
  const evidence=has(/\b(obserwow|widac|zobacze|sprawdze|mierze|kryterium|kryteria|po czym|sygnal|liczba|przewag|wolny zawodnik|skuteczn|cel|efekt|ocenic|ocena|powtarzal|progresj|wejsc|odzysk|strat|podanie|przyjecie)\b/);
- const adaptation=has(/\b(alternatyw|wariant|jesli|jezeli|gdy|natomiast|zamiast|reakcj|dostos|przeciwnik|rywal|zmieni|jesli nie|plan b|asekur|zabezpiecz|wycof|odwrotn)\b/);
+ const opponentContext=has(/\b(rywal\w*|przeciwnik\w*|pressing\w*|obrona\w*|napastnik\w*|pomocnik\w*)\b/);\n const responseAction=has(/\b(alternatyw\w*|wariant\w*|zamiast|reakcj\w*|dostos\w*|zmieni\w*|plan b|asekur\w*|zabezpiecz\w*|wycof\w*|odwrotn\w*|przenos\w*|zamkn\w*|odbudow\w*|utrzym\w*)\b/);\n const adaptation=opponentContext&&responseAction;
  const sources=[...(l.outcomes||[]),...(l.principles||[]).flat(),...(l.sections||[]).flatMap(s=>[s.title,...(s.bullets||[])])];
  const sourceTerms=[...new Set(sources.join(' ').toLocaleLowerCase('pl-PL').normalize('NFD').replace(/[\u0300-\u036f]/g,'').match(/[a-z]{6,}/g)||[])].filter(w=>!['poniewaz','dlatego','zawodnik','zawodnicy','powinien','powinna','mozemy','trener','trening','zespol','zespolu','ktory','ktora','ktore','podczas','jesli','przeciwnik','przeciwnika','mozliwosc','zachowanie','zachowania','sytuacji','sytuacja'].includes(w));
  const matched=sourceTerms.filter(term=>tokens.some(token=>token.startsWith(term.slice(0,Math.min(6,term.length)))||term.startsWith(token.slice(0,Math.min(6,token.length))))).slice(0,6);
  const conceptScore=matched.length>=3?2:matched.length>=1?1:0;
  const reasoningScore=causal&&wordCount>=28?2:causal||wordCount>=28?1:0;
  const evidenceScore=evidence&&transfer?2:evidence||transfer?1:0;
- const transferScore=has(/\b(trening|cwiczen|boisk|mecz|zawodnik|gra zadaniow|jednostk|powtorzen|serii|punktow|zasad gry|model gry)\b/)&&wordCount>=25?2:transfer?1:0;
+ const transferScore=trainingContext&&footballConcept&&has(/\b(obserw\w*|sprawdz\w*|ocen\w*|mier\w*|kryter\w*|gra zadaniow\w*|powtorzen\w*|serii|7 na 6|6 na 5|5 na 4)\b/)&&wordCount>=25?2:transfer?1:0;
  const adaptationScore=adaptation&&conditional?2:adaptation||conditional?1:0;
  const criteria=[
   {name:'Rozumienie zasady',score:conceptScore,max:2,detail:conceptScore===2?'Łączysz odpowiedź z kilkoma pojęciami z materiału.':conceptScore===1?'Pojawia się nawiązanie do materiału, ale warto nazwać zasadę dokładniej.':'Nie wykryto wyraźnego odwołania do pojęć z lekcji; wyjaśnij główną zasadę własnymi słowami.'},
