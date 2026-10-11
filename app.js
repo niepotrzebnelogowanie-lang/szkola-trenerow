@@ -338,42 +338,73 @@ function renderPracticeWorkshop(l,practice){
  return `<div class="practice-workshop"><div class="practice-status-row"><span class="label-mini">KARTA PRACY / ${l.number}</span><span class="pill ${practice&&practice.submitted?'success':'subtle'}">${practice&&practice.submitted?'ZAPISANO':'SZKIC ROBOCZY'}</span></div><div class="field"><label for="practice-response-${l.id}">Twoje rozwiązanie</label><textarea id="practice-response-${l.id}" data-practice-response="${l.id}" rows="5" placeholder="Opisz, co zrobiłbyś jako trener, dlaczego i jak sprawdzisz efekt…">${esc(practice&&practice.response||'')}</textarea><small class="field-hint">Zapis szkicu odbywa się lokalnie w tej przeglądarce.</small></div><div class="rubric-title"><b>Samoocena według kryteriów</b><span>0–2 pkt / kryterium</span></div><p class="field-hint">0 — brak / niejasne · 1 — częściowo · 2 — jasno i konkretnie. To narzędzie refleksji, nie oficjalna ocena egzaminacyjna.</p><div class="rubric-grid">${rubric.map(([key,title,help])=>`<div class="rubric-item"><label for="practice-score-${key}-${l.id}">${title}</label><small>${help}</small><select id="practice-score-${key}-${l.id}" data-practice-score="${key}" data-lesson-id="${l.id}"><option value="0" ${practiceScoreValue(practice,key)===0?'selected':''}>0 · Do poprawy</option><option value="1" ${practiceScoreValue(practice,key)===1?'selected':''}>1 · Częściowo</option><option value="2" ${practiceScoreValue(practice,key)===2?'selected':''}>2 · Jasno</option></select></div>`).join('')}</div>${practice&&practice.submitted?`<div class="practice-result"><div><span class="label-mini">TWOJA SAMOOCENA</span><strong>${score}/8 punktów</strong></div><p>${esc(practice.feedback||'Wróć do kryteriów i wskaż jeden element do poprawy.')}</p><small>Zapisano: ${esc(practice.date||'')}</small></div>`:''}<div class="form-actions"><button class="btn primary" data-action="save-practice" data-id="${l.id}">Zapisz zadanie i samoocenę ✓</button><button class="btn ghost small-btn" data-action="practice-journal" data-id="${l.id}">Przenieś wniosek do dziennika ↗</button></div></div>`;
 }
 function analyzeQuizReflection(l,text){
- const normalized=String(text||'').toLocaleLowerCase('pl-PL').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
- const tokens=normalized.match(/[a-z]{3,}/g)||[];
+ const normalized=String(text||'').toLocaleLowerCase('pl-PL').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[–—]/g,'-');
+ const tokens=normalized.match(/[a-z0-9+/-]{2,}/g)||[];
  const wordCount=tokens.length;
+ const sentences=(normalized.match(/[.!?]+(?=\s|$)/g)||[]).length;
  const has=pattern=>pattern.test(normalized);
- const causal=has(/\b(poniewaz|dlatego|bo|dzieki|gdy|jesli|jezeli|pozwala|umozliwia|wtedy|wynika|skutkiem|aby|zeby|przez to|co sprawia)\b/);
- const conditional=has(/\b(jezeli|jesli|gdy|kiedy|w przypadku|natomiast|z kolei|jesli rywal|gdy rywal|alternatyw|wariant|jesli nie|jesli przeciwnik)\b/);
- const trainingContext=has(/\b(trening\w*|cwiczen\w*|boisk\w*|mecz\w*|gra zadaniow\w*|jednostk\w*)\b/);
- const footballConcept=has(/\b(podani\w*|press\w*|asekur\w*|przestrzen\w*|lini\w*|bramk\w*|atak\w*|obron\w*|przewag\w*|woln\w*|przyjec\w*|budowani\w*|odbi\w*|strat\w*|kontr\w*|szerokos\w*|glebi\w*|centrum\w*)\b/);
- const transfer=trainingContext&&footballConcept;
- const evidence=has(/\b(obserw\w*|widac|zobacz\w*|sprawdz\w*|mierz\w*|kryter\w*|po czym|sygnal\w*|liczb\w*|przewag\w*|wolny zawodnik|skuteczn\w*|cel\w*|efekt\w*|ocen\w*|powtarzal\w*|progresj\w*|wejsc\w*|odzysk\w*|strat\w*|podani\w*|przyjec\w*)\b/);
- const opponentContext=has(/\b(rywal\w*|przeciwnik\w*|pressing\w*|obrona\w*|napastnik\w*|pomocnik\w*)\b/);
- const responseAction=has(/\b(alternatyw\w*|wariant\w*|zamiast|reakcj\w*|dostos\w*|zmieni\w*|plan b|asekur\w*|zabezpiecz\w*|wycof\w*|odwrotn\w*|przenos\w*|zamkn\w*|odbudow\w*|utrzym\w*)\b/);
- const adaptation=opponentContext&&responseAction;
- const sources=[...(l.outcomes||[]),...(l.principles||[]).flat(),...(l.sections||[]).flatMap(s=>[s.title,...(s.bullets||[])])];
- const sourceTerms=[...new Set(sources.join(' ').toLocaleLowerCase('pl-PL').normalize('NFD').replace(/[\u0300-\u036f]/g,'').match(/[a-z]{6,}/g)||[])].filter(w=>!['poniewaz','dlatego','zawodnik','zawodnicy','powinien','powinna','mozemy','trener','trening','zespol','zespolu','ktory','ktora','ktore','podczas','jesli','przeciwnik','przeciwnika','mozliwosc','zachowanie','zachowania','sytuacji','sytuacja'].includes(w));
- const matched=sourceTerms.filter(term=>tokens.some(token=>token.startsWith(term.slice(0,Math.min(6,term.length)))||term.startsWith(token.slice(0,Math.min(6,token.length))))).slice(0,6);
- const conceptScore=matched.length>=3?2:matched.length>=1?1:0;
- const reasoningScore=causal&&wordCount>=28&&footballConcept?2:causal||wordCount>=28?1:0;
- const evidenceScore=evidence&&transfer?2:evidence||transfer?1:0;
- const transferScore=trainingContext&&footballConcept&&has(/\b(obserw\w*|sprawdz\w*|ocen\w*|mier\w*|kryter\w*|gra zadaniow\w*|powtorzen\w*|serii|7 na 6|6 na 5|5 na 4)\b/)&&wordCount>=25?2:transfer?1:0;
- const adaptationScore=adaptation&&conditional?2:adaptation||conditional?1:0;
+ const containsAny=terms=>terms.some(term=>normalized.includes(term));
+ const causal=has(/\b(poniewaz|dlatego|bo|dzieki|gdy|jesli|jezeli|pozwala|umozliwia|wtedy|wynika|skutkiem|aby|zeby|przez to|co sprawia|z tego powodu|w efekcie)\b/);
+ const conditional=has(/\b(jezeli|jesli|gdy|kiedy|w przypadku|natomiast|z kolei|jesli rywal|gdy rywal|alternatyw|wariant|jesli nie|jesli przeciwnik|kiedy przeciwnik)\b/);
+ const trainingContext=has(/\b(trening\w*|cwiczen\w*|boisk\w*|mecz\w*|gra zadaniow\w*|jednostk\w*|zadan\w*|powtorzen\w*)\b/);
+ const tacticalConcept=has(/\b(podani\w*|press\w*|asekur\w*|przestrzen\w*|lini\w*|bramk\w*|atak\w*|obron\w*|przewag\w*|woln\w*|przyjec\w*|budowani\w*|odbi\w*|strat\w*|kontr\w*|szerokos\w*|glebi\w*|centrum\w*|polprzestrzen\w*|doskok\w*|blok\w*|mikrocykl\w*|obciazen\w*|regenerac\w*|zawodnik\w*|rywal\w*|przeciwnik\w*|wyzwalacz\w*|staly fragment\w*|rzut rozny|rzut wolny|feedback\w*|informacj zwrotn\w*)\b/);
+ const observable=has(/\b(obserw\w*|zobacz\w*|sprawdz\w*|mierz\w*|licz\w*|ocen\w*|notuj\w*|kryter\w*|sygnal\w*|po czym|widac|zauwaz\w*|monitor\w*|porown\w*|czas\w*|liczba\w*|procent\w*|powtarzal\w*|skuteczn\w*|po odbiorze|po stracie|po przyjeciu|przed podaniem|po podaniu|wejsc\w*|odzysk\w*|strat\w*|przyjec\w*|podani\w*)\b/);
+ const measurable=has(/\b(kryter\w*|liczb\w*|czas\w*|procent\w*|cel\w*|miernik\w*|po czym|jesli zawodnik|gdy zawodnik|czy zawodnik|wejsc\w*|odzysk\w*|strat\w*|przyjec\w*|podani\w*|progresj\w*|do kolejnej lini|za pierwsz lini|w kolejnej stref)\b/);
+ const opponentContext=has(/\b(rywal\w*|przeciwnik\w*|pressing\w*|obron\w*|napastnik\w*|pomocnik\w*|blok\w*|linia rywala|linia obron\w*|doskok\w*)\b/);
+ const responseAction=has(/\b(alternatyw\w*|wariant\w*|zamiast|reakcj\w*|dostos\w*|zmieni\w*|plan b|asekur\w*|zabezpiecz\w*|wycof\w*|odwrotn\w*|przenos\w*|zamkn\w*|odbudow\w*|utrzym\w*|obejsc\w*|wykorzyst\w*|wycofac|atakowac|przyspiesz\w*|zwolnij|cofn\w*|skierow\w*|przekierow\w*)\b/);
+ const opponentResponse=opponentContext&&responseAction&&(conditional||has(/\b(wtedy|w takiej sytuacji|w odpowiedzi|jesli nie|gdy nie)\b/));
+ const trainingDetail=has(/\b(gra zadaniow\w*|mala gra|małe gry|na polowie|na polowie boiska|7 na 6|6 na 5|5 na 4|4 na 3|3 na 2|z przewag\w*|z ograniczen\w*|limit\w*|punkty za|punkt za|serie|powtorzen|czas pracy|pole o|wymiary|stref\w*|warunek\w*|zasad\w* premiuj\w*|bramk\w* na)\b/);
+ const genericPhrases=['ciezko pracowac','byc dobrym','praca daje sukces','rozne cwiczenia','kazdy byl lepszy','zachowac motywacje','zawsze trzeba','zrobic wszystko','dawac z siebie wszystko','trzeba sie starac','najwazniejsza jest wygrana','pilka nozna jest bardzo wazna'];
+ const genericCount=genericPhrases.filter(term=>normalized.includes(term)).length;
+ const conceptMap={
+  'model-gry':[['model gry','formac','zasad','fazy gry','moment gry'],['cel','wskazow','kryter','dowod','obserwow'],['przejsc','atak','obron','zabezpiec']],
+  'build-up':[['budowani','4-4-2','dwoch napastnik','pierwsz lini','pressing'],['woln zawodnik','przewag','podani','progresj','kolejn lini'],['asekur','strat','centrum','bramkarz']],
+  'pressing':[['wyzwalacz','sygnal','podani wstecz','przyjecie','zle przyjecie'],['kierunek','zamkn','linia podani','sideline','skierowac'],['doskok','asekur','odleglosc','zabezpiec','pressing']],
+  'transitions':[['strat','odbior','przejsc','pierwsz sek'],['kontrpress','powrot','szybki atak','glebie','przewag'],['zabezpiecz','centrum','atakowac przestrzen','utrzymac pilke']],
+  'low-block':[['niski blok','blok obron','linia obron','obrona niska'],['szerokosc','zmian strony','polprzestrzen','centrum','przesunac'],['wbieg','dosrodk','cutback','druga pilka','asekur']],
+  'microcycle':[['md+1','md-1','mikrocykl','dzien mecz','dzien po meczu'],['obciazen','regenerac','intensywnosc','zmeczen','odpoczynek'],['cel jednostki','indywidualiz','liczba zawodnik','czas pracy','monitor']],
+  'opponent-analysis':[['obserwac','analiz','rywal','przeciwnik'],['wzorzec','tendenc','powtarzal','wyzwalacz','slabosc'],['plan mecz','przeciwdzial','reakcj','dowod','probka']],
+  'player-development':[['zawodnik','profil','mocna strona','rola'],['obserwow','dowod','sytuac','konkretne zachowanie'],['cel rozwoj','informacja zwrotn','rozmowa','nastepny krok']],
+  'set-pieces':[['staly fragment','rzut rozny','rzut wolny','aut'],['stref','blok','ruch','krycie','wbieg'],['druga pilka','zabezpiec','wariant','sygnal']],
+  'coaching':[['coaching','komunikat','instrukcj','informacja zwrotn'],['krotki','moment','sygnal','obserwowac'],['pytanie','feedback','samodzieln','decyzj','zawodnik']]
+ };
+ const groups=conceptMap[l.id]||[];
+ const matchedGroups=groups.filter(group=>containsAny(group));
+ const conceptScore=groups.length?(matchedGroups.length>=2?2:matchedGroups.length===1?1:0):(tacticalConcept?1:0);
+ const reasoningScore=causal&&tacticalConcept&&sentences>=2?2:(causal||((sentences>=3)&&tacticalConcept)?1:0);
+ const evidenceScore=observable&&measurable?2:(observable||measurable?1:0);
+ const transferScore=trainingContext&&tacticalConcept&&trainingDetail?2:(trainingContext&&tacticalConcept?1:0);
+ const adaptationScore=opponentResponse?2:((conditional&&responseAction)||(opponentContext&&responseAction)?1:0);
  const criteria=[
-  {name:'Rozumienie zasady',score:conceptScore,max:2,detail:conceptScore===2?'Łączysz odpowiedź z kilkoma pojęciami z materiału.':conceptScore===1?'Pojawia się nawiązanie do materiału, ale warto nazwać zasadę dokładniej.':'Nie wykryto wyraźnego odwołania do pojęć z lekcji; wyjaśnij główną zasadę własnymi słowami.'},
-  {name:'Uzasadnienie decyzji',score:reasoningScore,max:2,detail:reasoningScore===2?'Pokazujesz związek między decyzją a jej skutkiem.':reasoningScore===1?'Jest zalążek uzasadnienia; doprecyzuj, dlaczego decyzja pomaga w tej sytuacji.':'Dopisz przyczynę i skutek: dlaczego to rozwiązanie miałoby zadziałać?'},
-  {name:'Dowód na boisku',score:evidenceScore,max:2,detail:evidenceScore===2?'Wskazujesz obserwowalne zachowanie lub sposób sprawdzenia efektu.':evidenceScore===1?'Pojawia się kontekst boiskowy albo kryterium; połącz oba elementy.':'Dodaj konkretny sygnał, zachowanie lub kryterium, po którym poznasz, że zasada działa.'},
-  {name:'Przeniesienie na trening',score:transferScore,max:2,detail:transferScore===2?'Przekładasz zasadę na kontekst treningowy lub meczowy i rozwijasz odpowiedź.':transferScore===1?'Wskazujesz kontekst gry; dopisz, jak zamienisz to na konkretne zadanie.':'Opisz sytuację treningową, w której zawodnicy będą musieli zastosować tę zasadę.'},
-  {name:'Adaptacja i wariant',score:adaptationScore,max:2,detail:adaptationScore===2?'Uwzględniasz warunek, reakcję rywala lub alternatywę.':adaptationScore===1?'Zauważasz kontekst rywala albo warunek; dopisz, co zrobisz, gdy sytuacja się zmieni.':'Dodaj drugi wariant: jak zareagujesz, jeśli rywal zamknie pierwsze rozwiązanie?'}
+  {name:'Rozumienie zasady',score:conceptScore,max:2,detail:conceptScore===2?'Odpowiedź nawiązuje do kilku kluczowych zagadnień tej lekcji.':conceptScore===1?'Widać przynajmniej jeden punkt styczny z tematem; nazwij dokładniej zasadę i sytuację, w której ją stosujesz.':'Nie wykryto wyraźnego powiązania z kluczowymi zagadnieniami tej lekcji. Wyjaśnij, jaki problem gry rozwiązujesz.'},
+  {name:'Uzasadnienie decyzji',score:reasoningScore,max:2,detail:reasoningScore===2?'Łączysz zasadę taktyczną z przyczyną i przewidywanym skutkiem.':reasoningScore===1?'Pojawia się wyjaśnienie, ale doprecyzuj związek: co robi rywal, jak odpowiadasz i dlaczego to ma pomóc.':'Dopisz mechanizm decyzji: co zmienia się w ustawieniu lub zachowaniu rywala i jak twoja decyzja to wykorzysta.'},
+  {name:'Dowód na boisku',score:evidenceScore,max:2,detail:evidenceScore===2?'Wskazujesz obserwowalny sygnał oraz sposób sprawdzenia efektu.':evidenceScore===1?'Pojawia się obserwacja albo kryterium; połącz je, aby było wiadomo, po czym ocenisz skuteczność.':'Dodaj dowód możliwy do zobaczenia lub policzenia: zachowanie, moment, przestrzeń albo rezultat akcji.'},
+  {name:'Przeniesienie na trening',score:transferScore,max:2,detail:transferScore===2?'Opisujesz kontekst treningowy i konkretny format, regułę lub ograniczenie zadania.':transferScore===1?'Łączysz temat z treningiem, ale dopisz organizację zadania: przestrzeń, liczbę graczy, regułę lub warunek zdobycia punktu.':'Przełóż zasadę na zadanie treningowe. Określ sytuację gry i zachowanie, które zawodnicy mają ćwiczyć.'},
+  {name:'Adaptacja i wariant',score:adaptationScore,max:2,detail:adaptationScore===2?'Opisujesz reakcję przeciwnika oraz konkretną odpowiedź swojego zespołu.':adaptationScore===1?'Pojawia się warunek lub alternatywa, ale połącz je z konkretnym zachowaniem rywala i decyzją zespołu.':'Dodaj wariant: co zrobi rywal, jak to rozpoznasz i jakie rozwiązanie wybierzesz zamiast pierwszego planu.'}
  ];
- const score=criteria.reduce((sum,c)=>sum+c.score,0);
+ let score=criteria.reduce((sum,c)=>sum+c.score,0);
+ const specificSignals=[tacticalConcept,observable,trainingDetail,opponentResponse].filter(Boolean).length;
+ if(genericCount>=2&&matchedGroups.length===0&&specificSignals<2) score=Math.min(score,3);
+ else if(wordCount>=20&&matchedGroups.length===0&&specificSignals===0) score=Math.min(score,4);
+ const shortAnswer=wordCount<18||sentences<2;
+ const confidence=wordCount<18||sentences<2?'niska':(matchedGroups.length===0||specificSignals<2?'umiarkowana':'wyższa');
+ const confidenceLabel=confidence==='niska'?'Mało danych':confidence==='umiarkowana'?'Wynik orientacyjny':'Więcej konkretnych sygnałów';
  const strengths=criteria.filter(c=>c.score===2).map(c=>c.name+': '+c.detail);
- if(!strengths.length) strengths.push('Masz punkt wyjścia do analizy. Najwięcej zyskasz, rozwijając uzasadnienie i podając konkretny przykład z gry.');
+ if(!strengths.length) strengths.push('Masz punkt wyjścia. Największy postęp da dopisanie konkretnej sytuacji, decyzji i dowodu z gry.');
  const improve=criteria.filter(c=>c.score<2).sort((a,b)=>a.score-b.score).slice(0,3).map(c=>c.detail);
- if(wordCount<35) improve.unshift('Odpowiedź jest krótka. Spróbuj napisać 3–5 pełnych zdań, żeby pokazać tok myślenia.');
+ if(shortAnswer) improve.unshift('Odpowiedź jest zbyt krótka, by wiarygodnie ocenić tok myślenia. Dopisz 3–5 zdań, w tym przykład z gry i uzasadnienie.');
+ if(genericCount>=2&&specificSignals<2) improve.unshift('Unikaj ogólnych haseł. Zamiast „trzeba się starać” opisz konkretne zachowanie zawodnika, sygnał i skutek.');
+ const uniqueImprove=[...new Set(improve)].slice(0,4);
  const level=score>=8?'Spójne rozumowanie':score>=5?'Rozumienie w budowie':'Potrzebne doprecyzowanie';
- const nextStep=criteria.find(c=>c.score<2);
- return {score,maxScore:10,criteria,strengths,improve,matched,wordCount,level,nextStep:nextStep?nextStep.name:'Dodaj trudniejszy wariant i sprawdź, czy zasada działa przeciw innemu zachowaniu rywala.',note:'To jakościowa analiza heurystyczna: sprawdza sygnały rozumowania, pojęcia i zastosowania, a nie pełne znaczenie tekstu jak ekspert lub model językowy. Wynik jest wskazówką do nauki, nie oceną egzaminacyjną.'};
+ const next=criteria.slice().sort((a,b)=>a.score-b.score)[0];
+ const detected=[];
+ if(matchedGroups.length) detected.push('pojęcia związane z lekcją');
+ if(causal&&tacticalConcept) detected.push('uzasadnienie taktyczne');
+ if(observable||measurable) detected.push('obserwacja lub kryterium');
+ if(trainingContext&&tacticalConcept) detected.push('zastosowanie w treningu');
+ if(opponentResponse) detected.push('reakcja na zachowanie rywala');
+ const reliabilityMessage=confidence==='niska'?'System ma za mało informacji, aby mocno ufać wynikowi. Potraktuj go jako sygnał, co dopisać, a nie ocenę twojej wiedzy.':confidence==='umiarkowana'?'Część elementów jest widoczna, ale wynik może nie rozpoznać poprawnej parafrazy albo zbyt ogólnie opisanej sytuacji.':'Odpowiedź zawiera kilka różnych sygnałów, ale analiza nadal opiera się na regułach językowych, nie na pełnym rozumieniu taktyki.';
+ return {score,maxScore:10,criteria,strengths,improve:uniqueImprove,matched:matchedGroups.flat(),matchedGroups:matchedGroups.length,wordCount,sentenceCount:sentences,level,nextStep:next.score<2?next.name:'Dodaj trudniejszy wariant i sprawdź, czy zasada działa przeciw innemu zachowaniu rywala.',confidence,confidenceLabel,detected,reliabilityMessage,note:'To lokalna analiza heurystyczna. Nie rozumie w pełni sensu wypowiedzi i może pomijać dobre parafrazy lub rozpoznawać nietrafione sygnały. Wynik jest wskazówką do nauki, nie oceną szkolną ani egzaminacyjną.'};
 }
 function renderQuizReflection(l,result){
  if(!result||!result.correct&&!result.date) return '';
